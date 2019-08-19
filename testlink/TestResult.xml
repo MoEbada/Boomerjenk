@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<test-run id="2" testcasecount="5" result="Failed" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="2" engine-version="3.10.0.0" clr-version="4.0.30319.42000" start-time="2019-08-14 13:17:44Z" end-time="2019-08-14 13:17:47Z" duration="3.402648">
+  <command-line><![CDATA[D:\nunit-console\bin\net35\nunit3-console.exe  "D:\ReportNunitTestResultToTestlink\Testlink.Test\bin\Debug\Testlink.Test.dll" --where:" class == Testlink.UnitTest1 || class == Testlink.UnitTest4" -out="D:\nunit.xml"]]></command-line>
+  <filter>
+    <or>
+      <class>Testlink.UnitTest1</class>
+      <class>Testlink.UnitTest4</class>
+    </or>
+  </filter>
+  <test-suite type="Assembly" id="0-1009" name="Testlink.Test.dll" fullname="Testlink.Test.dll" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2019-08-14 13:17:44Z" end-time="2019-08-14 13:17:47Z" duration="2.714131" total="2" passed="1" failed="1" warnings="0" inconclusive="0" skipped="0" asserts="2">
+    <environment framework-version="3.11.0.0" clr-version="4.0.30319.42000" os-version="Microsoft Windows NT 10.0.17763.0" platform="Win32NT" cwd="C:\Users\Mohamedm\eclipse-workspace\testlink" machine-name="28LJQV2" user="Mohamedm" user-domain="SIOUX" culture="en-US" uiculture="en-US" os-architecture="x64" />
+    <settings>
+      <setting name="DisposeRunners" value="True" />
+      <setting name="WorkDirectory" value="C:\Users\Mohamedm\eclipse-workspace\testlink" />
+      <setting name="ImageRuntimeVersion" value="4.0.30319" />
+      <setting name="ImageTargetFrameworkName" value=".NETFramework,Version=v4.6.1" />
+      <setting name="ImageRequiresX86" value="False" />
+      <setting name="ImageRequiresDefaultAppDomainAssemblyResolver" value="False" />
+      <setting name="NumberOfTestWorkers" value="12" />
+    </settings>
+    <properties>
+      <property name="_PID" value="32" />
+      <property name="_APPDOMAIN" value="domain-" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="TestSuite" id="0-1010" name="Testlink" fullname="Testlink" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2019-08-14 13:17:44Z" end-time="2019-08-14 13:17:47Z" duration="2.699196" total="2" passed="1" failed="1" warnings="0" inconclusive="0" skipped="0" asserts="2">
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestFixture" id="0-1002" name="UnitTest1" fullname="Testlink.UnitTest1" classname="Testlink.UnitTest1" runstate="Runnable" testcasecount="1" result="Passed" start-time="2019-08-14 13:17:44Z" end-time="2019-08-14 13:17:46Z" duration="1.452922" total="1" passed="1" failed="0" warnings="0" inconclusive="0" skipped="0" asserts="1">
+        <test-case id="0-1003" name="TestMethod1" fullname="Testlink.UnitTest1.TestMethod1" methodname="TestMethod1" classname="Testlink.UnitTest1" runstate="Runnable" seed="2090966991" result="Passed" start-time="2019-08-14 13:17:44Z" end-time="2019-08-14 13:17:46Z" duration="1.435055" asserts="1">
+          <properties>
+            <property name="testlinkName" value="DemoAutomated_TestCase" />
+          </properties>
+          <output><![CDATA[NUNITTEST: D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+Reading config file D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+NUNITTEST: ac34c9446dfb0d260f130a09333e3f26
+NUNITTEST: D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+Reading config file D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+NUNITTEST: ac34c9446dfb0d260f130a09333e3f26
+Passed
+]]></output>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="0-1000" name="UnitTest4" fullname="Testlink.UnitTest4" classname="Testlink.UnitTest4" runstate="Runnable" testcasecount="1" result="Failed" site="Child" start-time="2019-08-14 13:17:46Z" end-time="2019-08-14 13:17:47Z" duration="1.240293" total="1" passed="0" failed="1" warnings="0" inconclusive="0" skipped="0" asserts="1">
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-case id="0-1001" name="TestMethod4" fullname="Testlink.UnitTest4.TestMethod4" methodname="TestMethod4" classname="Testlink.UnitTest4" runstate="Runnable" seed="401373307" result="Failed" start-time="2019-08-14 13:17:46Z" end-time="2019-08-14 13:17:47Z" duration="1.240084" asserts="1">
+          <properties>
+            <property name="testlinkName" value="20190808-15:43:04 DemoAutomated_TestCase" />
+          </properties>
+          <failure>
+            <message><![CDATA[  hello testlink from ttttthere
+  Expected: True
+  But was:  False
+]]></message>
+            <stack-trace><![CDATA[   at Testlink.UnitTest4.TestMethod4() in D:\ReportNunitTestResultToTestlink\Testlink.Test\UnitTest4.cs:line 16
+]]></stack-trace>
+          </failure>
+          <output><![CDATA[NUNITTEST: D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+Reading config file D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+NUNITTEST: ac34c9446dfb0d260f130a09333e3f26
+NUNITTEST: D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+Reading config file D:\ReportNunitTestResultToTestlink\XMLFile1.xml
+NUNITTEST: ac34c9446dfb0d260f130a09333e3f26
+I was here
+Failed
+]]></output>
+          <assertions>
+            <assertion result="Failed">
+              <message><![CDATA[  hello testlink from ttttthere
+  Expected: True
+  But was:  False
+]]></message>
+              <stack-trace><![CDATA[   at Testlink.UnitTest4.TestMethod4() in D:\ReportNunitTestResultToTestlink\Testlink.Test\UnitTest4.cs:line 16
+]]></stack-trace>
+            </assertion>
+          </assertions>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
