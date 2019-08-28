@@ -573,7 +573,7 @@ public class TestServiceApi extends BaseService {
 	     */
 	    protected ReportTCResultResponse reportTCResult(Integer testCaseId, Integer testCaseExternalId, Integer testPlanId,
 	            ExecutionStatus status, List<TestCaseStepResult> steps, Integer buildId, String buildName,
-	            String notes, String executionDuration, Boolean guess, String bugId,
+	            String notes, double executionDuration, Boolean guess, String bugId,
 	            Integer platformId, String platformName, Map<String, String> customFields, Boolean overwrite,
 	            String user, String timestamp)
 	            throws TestLinkAPIException {

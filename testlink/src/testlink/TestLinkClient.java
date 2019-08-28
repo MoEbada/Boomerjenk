@@ -2,165 +2,67 @@ package testlink;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Base64;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import javax.swing.JOptionPane;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FileUtils;
-
 import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import br.eti.kinoshita.testlinkjavaapi.TestLinkAPI;
-import br.eti.kinoshita.testlinkjavaapi.constants.ActionOnDuplicate;
 import br.eti.kinoshita.testlinkjavaapi.constants.ExecutionStatus;
 import br.eti.kinoshita.testlinkjavaapi.constants.ExecutionType;
-import br.eti.kinoshita.testlinkjavaapi.constants.TestCaseDetails;
-import br.eti.kinoshita.testlinkjavaapi.constants.TestCaseStatus;
-import br.eti.kinoshita.testlinkjavaapi.constants.TestCaseStepAction;
-import br.eti.kinoshita.testlinkjavaapi.constants.TestImportance;
-import br.eti.kinoshita.testlinkjavaapi.model.Attachment;
 import br.eti.kinoshita.testlinkjavaapi.model.CustomField;
 import br.eti.kinoshita.testlinkjavaapi.model.TestCase;
-import br.eti.kinoshita.testlinkjavaapi.model.TestCaseStep;
-import br.eti.kinoshita.testlinkjavaapi.model.TestCaseStepResult;
 import br.eti.kinoshita.testlinkjavaapi.util.TestLinkAPIException;
 
 public class TestLinkClient {
 
-	static final String testlinkLogin = "http://s001thermo.siouxehv.nl/testlink/login.php";
-	static final String url = "http://s001thermo.siouxehv.nl/testlink/lib/api/xmlrpc/v1/xmlrpc.php";
-	static final String devKey = "4835f134e99b352c32fbe30512656580";
-	static TestLinkAPI api = null;
-	static testlink.TestLinkAPI api_tcResult = null;	//Modified TestLink API to handle string "execution duration" for test results
-	static URL testlinkURL;
-	static XMLParser parser = null;
-	static String xmlFilePath = "D:\\testresult.xml";
-	static Document parsedXml = null;
-	static String testProjectName = "D2i Demo Project";
-	static String testPlanName = null;
-	static Integer testPlanId = null;
-	static Integer buildId = null;
-	static String buildName = null;
-	static Integer platformId = null;
-	static String platformName = null;
-	static String logFilePath = "D:\\nunitoutput\\TestResult.xml";
-	public static Map<String, String> tcName_Id = new HashMap<String, String>();
-	private static Process p;
-	private static int exitVal = 0;
-	public static Map<String, String> testFixtureId = new HashMap<String, String>();
-	static String Execution_Command = "START /WAIT D:\\nunit-console\\bin\\net35\\nunit3-console.exe \"D:\\ReportNunitTestResultToTestlink\\Testlink.Test\\bin\\Debug\\Testlink.Test.dll\" --where:\"\" --work=\"D:\\nunitoutput\" \r\n exit";
-	private static final String TESTFIXTURE_CUSTOMFIELD = "testfixture";
+	TestLinkAPI api = null;
+	testlink.TestLinkAPI api_tcResult = null; // Modified TestLink API to handle string "execution duration" for
+	XMLParser parser = null;
+	Document parsedXml = null;
+	Map<String, String> tcName_Id = new HashMap<String, String>();
+	Map<String, String> testFixtureId = new HashMap<String, String>();
+	AssemblyDownloader assemblyDownloader = null;
+
+	// Following variables are being read from the system after jenkins stores them
+	String testPlanName = null;
+	Integer testPlanId = null;
+	Integer buildId = null;
+	String buildName = null;
+	Integer platformId = null;
+	String platformName = null;
+	
+	TestLinkClient() {
+		this.parser = new XMLParser(this); // XML parser to read and write test execution log and testlink importable file
+	}
 
 	/*************** update test case result ***************/
-	private static void updateTestCases() {
-		for (int tcNum = 0; tcNum < parsedXml.getElementsByTagName("testcase").getLength(); tcNum++) {
-			Node testcase = parsedXml.getElementsByTagName("testcase").item(tcNum);
-
-			Integer testPlanId = new Integer(parsedXml.getElementsByTagName("testplan").item(0).getAttributes()
-					.getNamedItem("id").getTextContent());
-			Integer buildId = new Integer(parsedXml.getElementsByTagName("build").item(0).getAttributes()
-					.getNamedItem("id").getTextContent());
-			String buildName = parsedXml.getElementsByTagName("build").item(0).getAttributes().getNamedItem("name")
-					.getTextContent();
-			Integer platformId = new Integer(parsedXml.getElementsByTagName("platform").item(0).getAttributes()
-					.getNamedItem("id").getTextContent());
-			String platformName = parsedXml.getElementsByTagName("platform").item(0).getAttributes()
-					.getNamedItem("name").getTextContent();
-
-			Integer testCaseId = new Integer(testcase.getAttributes().getNamedItem("id").getTextContent());
-//			Integer testCaseExternalId = new Integer(
-//					testcase.getAttributes().getNamedItem("external_id").getTextContent());
-
-			String notes, user, timestamp, bugId;
-			notes = user = timestamp = bugId = null;
-//			Integer executionDuration = null;
-			String executionDuration = null;
-			Boolean overwrite, guess;
-			overwrite = guess = null;
-			List<TestCaseStepResult> stepsResult = new LinkedList<TestCaseStepResult>();
-			ExecutionType executionType = null;
-			ExecutionStatus stepStatus, tcStatus;
-			stepStatus = tcStatus = null;
+	void updateTestCases(Testcases listOfTestCases) {
+		for (Testcase tc:listOfTestCases.getTestcases()) {
+			Double executionDurationMinutes = tc.getExecutionDuration()/60.0;
+			ExecutionStatus tcStatus = getExecutionStatus(tc.getResult());
+			String user = tc.getTester();
 			Map<String, String> customFields = null;
-
-			NodeList tcData = testcase.getChildNodes();
-			for (int i = 0; i < tcData.getLength(); i++) {
-				if (tcData.item(i).getNodeType() == Node.ELEMENT_NODE) {
-					switch (tcData.item(i).getNodeName()) {
-//					case "notes":
-//						notes = tcData.item(i).getTextContent();
-//						break;
-
-					case "executionDuration":
-//						executionDuration = new Integer(tcData.item(i).getTextContent());
-						executionDuration = tcData.item(i).getTextContent();
-						break;
-
-//					case "overwrite":
-//						overwrite = new Boolean(tcData.item(i).getTextContent());
-//						break;
-
-					case "tester":
-						user = tcData.item(i).getTextContent();
-						break;
-
-					case "timestamp":
-						timestamp = tcData.item(i).getTextContent();
-						break;
-
-//					case "guess":
-//						guess = new Boolean(tcData.item(i).getTextContent());
-//						break;
-
-//					case "bug_id":
-//						bugId = tcData.item(i).getTextContent();
-//						break;
-
-					case "result":
-						tcStatus = getExecutionStatus(tcData.item(i).getTextContent());
-						break;
-
-					case "stepresult":
-						NamedNodeMap attributes = tcData.item(i).getAttributes();
-						stepStatus = getExecutionStatus(attributes.getNamedItem("status").getTextContent());
-						executionType = getExecutionType(attributes.getNamedItem("exectype").getTextContent());
-
-						stepsResult.add(new TestCaseStepResult(
-								new Integer(attributes.getNamedItem("num").getTextContent()), stepStatus,
-								tcData.item(i).getTextContent(),
-								new Boolean(attributes.getNamedItem("active").getTextContent()), executionType));
-						break;
-
-					default:
-						System.out.println(
-								"Element " + tcData.item(i).getNodeName() + "has been found and not assigned.");
-						break;
-					}
-				}
-			}
-
-			//Additional test case information that are currently not available
-//			api.reportTCResult(testCaseId, testCaseExternalId, testPlanId, tcStatus, stepsResult, buildId, buildName,
-//					notes, executionDuration, guess, bugId, platformId, platformName, customFields, overwrite, user,
-//					timestamp);
-//			api.reportTCResult(testCaseId, null, testPlanId, tcStatus, null, buildId, buildName, "", executionDuration,
-//					true, null, platformId, platformName, customFields, true, user, timestamp);
-			api_tcResult.reportTCResult(testCaseId, null, testPlanId, tcStatus, null, buildId, buildName, "",
-					executionDuration, true, null, platformId, platformName, customFields, true, user, timestamp);
+			
+			api_tcResult.reportTCResult(tc.getId(), null, testPlanId, tcStatus, null, buildId, buildName, "",
+					executionDurationMinutes, true, null, platformId, platformName, customFields, true, tc.getTester(), tc.getTimestamp());
 		}
 	}
 
-	private static ExecutionType getExecutionType(String textContent) {
+	ExecutionType getExecutionType(String textContent) {
 		ExecutionType executionType = null;
 		if (textContent.equalsIgnoreCase("A")) {
 			executionType = ExecutionType.AUTOMATED;
@@ -172,7 +74,7 @@ public class TestLinkClient {
 		return executionType;
 	}
 
-	private static ExecutionStatus getExecutionStatus(String textContent) {
+	ExecutionStatus getExecutionStatus(String textContent) {
 		ExecutionStatus status = null;
 		if (textContent.equalsIgnoreCase("p")) {
 			status = ExecutionStatus.PASSED;
@@ -193,7 +95,7 @@ public class TestLinkClient {
 	 * 
 	 * @return parsed xml document to extract test results
 	 **************/
-	private static Document parseXmlResults(String xmlFilePath) {
+	Document parseXmlResults(String xmlFilePath) {
 		try {
 			parsedXml = parser.parse(xmlFilePath);
 		} catch (ParserConfigurationException e) {
@@ -237,11 +139,13 @@ public class TestLinkClient {
 	 * and Platform to select test cases to execute. For each test case in selected
 	 * testplan, download attached script and execute it.
 	 */
-	private static void executeTestScripts() {
+	Integer executeTestScripts() {
 		String executableWriteTo = "D:\\attach.bat";
+		Process p;
+		int exitVal = 0;
 		System.out.println(testPlanId);
 
-		byte[] bytearray = Execution_Command.getBytes();
+		byte[] bytearray = Config.getInstance().nunitExecutionCommand.getBytes();
 		try {
 			FileUtils.writeByteArrayToFile(new File(executableWriteTo), bytearray);
 		} catch (IOException e) {
@@ -261,20 +165,14 @@ public class TestLinkClient {
 			e.printStackTrace();
 			System.out.println("InterruptedException: " + e.getMessage());
 		}
+		return exitVal;
 	}
 
 	/*********** Creates TestLink API Client ************/
-	private static TestLinkAPI getTestLinkApi() {
+	TestLinkAPI getTestLinkApi() {
 		try {
-			testlinkURL = new URL(url);
-		} catch (MalformedURLException mue) {
-			mue.printStackTrace(System.err);
-			System.out.println("MalformedURLException: " + mue.getMessage());
-		}
-
-		try {
-			api_tcResult = new testlink.TestLinkAPI(testlinkURL, devKey);
-			api = new TestLinkAPI(testlinkURL, devKey);
+			api_tcResult = new testlink.TestLinkAPI(Config.getInstance().getTestlinkURL(), Config.getInstance().devKey);
+			api = new TestLinkAPI(Config.getInstance().getTestlinkURL(), Config.getInstance().devKey);
 		} catch (TestLinkAPIException te) {
 			te.printStackTrace(System.err);
 			System.out.println("TestLinkAPIException: " + te.getMessage());
@@ -282,7 +180,7 @@ public class TestLinkClient {
 		return api;
 	}
 
-	private static void getTestFixtureAndUpdateExecFilter() {
+	void getTestFixtureAndUpdateExecFilter() {
 		TestCase[] executableTestCases = api.getTestCasesForTestPlan(testPlanId, null, null, null, null, null, null,
 				null, ExecutionType.AUTOMATED, Boolean.TRUE, null);
 
@@ -290,30 +188,29 @@ public class TestLinkClient {
 			TestCase tc = executableTestCases[i];
 
 			// For each test case, get test fixture from custom fields
-			CustomField cf = api.getTestCaseCustomFieldDesignValue(tc.getId(), tc.getExternalId(), tc.getVersion(), 1,
-					TESTFIXTURE_CUSTOMFIELD, null);
+			CustomField cf = api.getTestCaseCustomFieldDesignValue(tc.getId(), tc.getExternalId(), tc.getVersion(),
+					Config.getInstance().getTestProjectId(), Config.getInstance().getTestfixtureCustomfieldName(), null);
 
 			// create test fixture and test case id pairs
 			testFixtureId.put(cf.getValue(), tc.getId().toString());
 
 			// Add test fixtures to nunit execution filter
 			if (i > 0) {
-				Execution_Command = Execution_Command.replaceFirst("--where:\"",
+				Config.getInstance().nunitExecutionCommand = Config.getInstance().nunitExecutionCommand.replaceFirst("--where:\"",
 						"--where:\" class == " + cf.getValue() + " || ");
 			} else {
-				Execution_Command = Execution_Command.replaceFirst("--where:\"",
+				Config.getInstance().nunitExecutionCommand = Config.getInstance().nunitExecutionCommand.replaceFirst("--where:\"",
 						"--where:\" class ==  " + cf.getValue());
 			}
-
 		}
 	}
 
-	private static void getTestPlan_BuildId_Platform() {
+	void getTestPlan_BuildId_Platform() {
 		System.out.println(System.getenv("TEST_PLAN"));
 		System.out.println(api.getProjects().toString());
 
 		testPlanName = System.getenv("TEST_PLAN");
-		testPlanId = api.getTestPlanByName(testPlanName, testProjectName).getId();
+		testPlanId = api.getTestPlanByName(testPlanName, Config.getInstance().getTestProjectName()).getId();
 		buildName = System.getenv("BUILD_ID");
 		buildId = api.getBuildsForTestPlan(testPlanId)[0].getId();
 		platformName = System.getenv("PLATFORM");
@@ -321,37 +218,32 @@ public class TestLinkClient {
 
 	}
 
-	public static void main(String[] args) throws IOException {
-		// XML parser to read and write test execution log and testlink importable file
-		parser = new XMLParser();
+	void addTestAssemblyToExecution() {
+		File dir = new File(Config.getInstance().getAssembliesPathOnDisk());
 
-		// Testlink API client to communicate with Testlink
-		api = getTestLinkApi();
+		List<Path> files = null;
+		try {
+			files = Files.walk(Paths.get(dir.getAbsolutePath())).filter(s -> s.toString().endsWith("Test.dll"))
+					.sorted().collect(Collectors.toList());
+		} catch (IOException e) {
+			System.out.println("IOException: " + e.getMessage());
+		}
 
-		// Get jenkins build parameters to use them to extract test cases to execute
-		getTestPlan_BuildId_Platform();
-
-		/**
-		 * Create pairs of test case id and test fixture to be executed by nunit. 
-		 * Update @Execution_Command with filtered test cases
-		 */
-		getTestFixtureAndUpdateExecFilter();
-
-		// Execute selected test fixtures and and wait for log file to be created
-		executeTestScripts();
-
-		// Build Testlink-importable xml file containing test results obtained from
-		// generated log file, that was created by execution of nunit tests
-		parser.generateResultsXml(testPlanName, testPlanId, buildName, buildId, platformName, platformId, logFilePath);
-		
-		//parse importable xml to be ready for updating test results
-		parsedXml = parseXmlResults(xmlFilePath);
-		
-		//Use parsed document to extract test results and update Testlink
-		updateTestCases();
-
-		System.out.println("Testlink - Test cases have been updated successfully");
-
+		for (Path file : files) {
+			Config.getInstance().nunitExecutionCommand = Config.getInstance().nunitExecutionCommand.replaceFirst("console.exe",
+						"console.exe " + "\"" + file.toAbsolutePath().toString().replace("\\", "\\\\") + "\"");
+				System.out.println(Config.getInstance().nunitExecutionCommand);
+		}
 	}
 
+	void testlinkDevkeyLogin() {
+		//TODO: remove this function as devKey will be read only from configuration file, when tool
+		//is running on dedicated machine instead of users' machines
+		Config.getInstance().devKey = JOptionPane.showInputDialog(null, "Enter your DevKey");
+	}
+
+	String getArtifacts() {
+		Config.getInstance().assembliesPathOnServer = JOptionPane.showInputDialog(null, "Enter artifacts/assemblies URL", Config.getInstance().assembliesPathOnServer);
+		return Config.getInstance().assembliesPathOnServer;
+	}
 }

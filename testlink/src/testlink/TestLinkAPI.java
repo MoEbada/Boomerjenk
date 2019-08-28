@@ -1009,7 +1009,7 @@ public class TestLinkAPI {
      * @param buildId build ID
      * @param buildName build name
      * @param notes notes
-     * @param executionDuration execution duration (minutes)
+     * @param executionDurationSeconds execution duration (minutes)
      * @param guess flag to guess other parameters or not
      * @param bugId bug ID
      * @param platformId platform ID
@@ -1023,11 +1023,11 @@ public class TestLinkAPI {
      */
     public ReportTCResultResponse reportTCResult(Integer testCaseId, Integer testCaseExternalId, Integer testPlanId,
             ExecutionStatus status, List<TestCaseStepResult> steps, Integer buildId, String buildName, String notes,
-            String executionDuration, Boolean guess, String bugId, Integer platformId, String platformName,
+            double executionDurationSeconds, Boolean guess, String bugId, Integer platformId, String platformName,
             Map<String, String> customFields, Boolean overwrite, String user, String timestamp)
             throws TestLinkAPIException {
         return this.testCaseService.reportTCResult(testCaseId, testCaseExternalId, testPlanId, status, steps, buildId,
-                buildName, notes, executionDuration, guess, bugId, platformId, platformName, customFields, overwrite,
+                buildName, notes, executionDurationSeconds, guess, bugId, platformId, platformName, customFields, overwrite,
                 user, timestamp);
     }
 
