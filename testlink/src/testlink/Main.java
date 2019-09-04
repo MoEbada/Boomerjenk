@@ -41,9 +41,7 @@ public class Main {
 
 		// Use parsed document to extract test results and update Testlink
 		updateTestCases(testcases);
-
 		System.out.println("Testlink - Test cases have been updated successfully");
-
 	}
 
 	private static void updateTestCases(Testcases testcases) {
@@ -89,7 +87,7 @@ public class Main {
 		Config.getInstance().initializeConfigurationVariables();
 		testlinkClient = new TestLinkClient();
 		// Prompt for artifacts URL to download assemblies and dependencies
-		assemblyDownloader = new AssemblyDownloader(testlinkClient.getArtifacts());
+		assemblyDownloader = new AssemblyDownloader(testlinkClient.getArtifactsUrl());
 	}
 
 }

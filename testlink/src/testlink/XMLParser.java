@@ -114,9 +114,12 @@ public class XMLParser {
 			Element testcase = xmlResult.createElement("testcase");
 
 			if (null != executedTestFixtures.item(i)) {
+				testcase.setAttribute("FullExternalId", 
+						((Element)(executedTestFixtures.item(i))).getElementsByTagName("property").item(0).getAttributes().getNamedItem("value").getTextContent());
+				
 				testcase.setAttribute("id", testlinkclient.testFixtureId
-						.get(executedTestFixtures.item(i).getAttributes().getNamedItem("classname").getTextContent()));
-
+						.get(((Element)(executedTestFixtures.item(i))).getElementsByTagName("property").item(0).getAttributes().getNamedItem("value").getTextContent()));
+				
 				Element testerElement = xmlResult.createElement("tester");
 				testerElement.setTextContent(tester);
 
@@ -191,7 +194,7 @@ public class XMLParser {
 		XPathExpression expr = null;
 		NodeList nl = null;
 		try {
-			expr = xpath.compile("//test-suite[@type=\"TestFixture\" and @runstate=\"Runnable\"]");
+			expr = xpath.compile("//test-suite[@type=\"TestFixture\" and @runstate=\"Runnable\" and descendant::properties]");
 			nl = (NodeList) expr.evaluate(parsedLogFile, XPathConstants.NODESET);
 		} catch (XPathExpressionException e) {
 			e.printStackTrace();
@@ -202,6 +205,7 @@ public class XMLParser {
 	}
 	
 	Testcases getTestCasesFromTestReport(String xmlFilePath) {
+		System.out.println("Parsing testcases from xml to java objects..");
 		Testcases testcases = null;
 		try {
 
@@ -212,13 +216,16 @@ public class XMLParser {
 		    //We had written this file in marshalling example
 		    testcases = (Testcases) jaxbUnmarshaller.unmarshal(file);
 		     
-		    for(Testcase tc : testcases.getTestcases())
-		    {
-		        System.out.println(tc.getId());
-		        System.out.println(tc.getTester());
-		    }
+			if (null == testcases.getTestcases() || testcases.getTestcases().size() <= 0) {
+				System.out.println("No test cases were executed!");
+			} else {
+				System.out.println("Following testcases were executed successfully:");
+				for (Testcase tc : testcases.getTestcases()) {
+					System.out.println("Testcase with ID \'" + tc.getId() + "\'" + "by user <" + tc.getTester() + ">");
+				}
+			}
 
-		  } catch (JAXBException e) {
+		} catch (JAXBException e) {
 			e.printStackTrace();
 		  }
 		return testcases;

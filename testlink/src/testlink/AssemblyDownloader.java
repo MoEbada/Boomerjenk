@@ -19,11 +19,11 @@ import org.openqa.selenium.firefox.FirefoxProfile;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import io.github.pramcharan.wd.binary.downloader.WebDriverBinaryDownloader;
+import io.github.pramcharan.wd.binary.downloader.enums.Browser;
+
 public class AssemblyDownloader {
 
-	// This path, along with all other C:\ or D:\ paths, should be edited once when
-	// tool is running on a dedicated machine
-	private static final String FIREFOX_DRIVER_PATH = "C:\\Users\\Mohamedm\\PycharmProjects\\TestLinkProject\\drivers\\geckodriver.exe";
 	WebDriver driver = null;
 
 	private AssemblyDownloader() {
@@ -46,7 +46,7 @@ public class AssemblyDownloader {
 	}
 
 	private void initSelenium() {
-		System.setProperty("webdriver.gecko.driver", FIREFOX_DRIVER_PATH);
+		WebDriverBinaryDownloader.create().downloadLatestBinaryAndConfigure(Browser.FIREFOX);
 	}
 
 	/**
@@ -65,6 +65,7 @@ public class AssemblyDownloader {
 		profile.setPreference("browser.helperApps.neverAsk.saveToDisk", "application/x-msdownload, application/zip");
 
 		options.setProfile(profile);
+
 		WebDriver driver = new FirefoxDriver(options);
 		return driver;
 	}
@@ -82,6 +83,7 @@ public class AssemblyDownloader {
 			System.out.println(file.getAttribute("href"));
 		}
 		this.driver.close();
+		this.driver.quit();
 	}
 
 	/**
@@ -93,9 +95,9 @@ public class AssemblyDownloader {
 				.until(ExpectedConditions.presenceOfElementLocated(By.className("fileList")));
 
 		// Before file download, remove old instance of it if exists
-		if (Files.exists(Paths.get("D:/assembly/archive.zip"))) {
+		if (Files.exists(Paths.get(Config.getInstance().getAssembliesPathOnDisk() + "\\archive.zip"))) {
 			try {
-				Files.delete(Paths.get("D:/assembly/archive.zip"));
+				Files.delete(Paths.get(Config.getInstance().getAssembliesPathOnDisk() + "\\archive.zip"));
 			} catch (IOException e) {
 				System.out.println("IOException: " + e.getMessage());
 			}
@@ -104,17 +106,27 @@ public class AssemblyDownloader {
 		driver.findElement(By.cssSelector("a[href$='archive.zip']")).click();
 
 		// Wait for zipped archive download to finish
-		while (Files.exists(Paths.get("D:/assembly/archive.zip.part"))) {
+		int timeoutSeconds = 0;
+		while (Files.exists(Paths.get(Config.getInstance().getAssembliesPathOnDisk() + "\\archive.zip.part"))) {
+			if (timeoutSeconds >= 90) {
+				System.out.println(" Timeout error after waiting for assembly download - (90sec)");
+				break;
+			}
 			try {
+				timeoutSeconds++;
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				System.out.println("InterruptedException: " + e.getMessage());
 			}
 		}
 		this.driver.close();
-
-		unzip(Config.getInstance().getAssembliesUriOnDisk(),
-				Config.getInstance().getAssembliesPathOnDisk() + "/archive.zip");
+		System.out.println("DOWNLOADED ARTIFACTS AT: " + Config.getInstance().getAssembliesPathOnDisk());
+		if (!Files.exists(Paths.get(Config.getInstance().getAssembliesPathOnDisk() + "\\archive.zip"))) {
+			System.out.println("Downloading artifacts has failed");
+		} else {
+			unzip(Config.getInstance().getAssembliesPathOnDisk(),
+					Config.getInstance().getAssembliesPathOnDisk() + "\\archive.zip");
+		}
 	}
 
 	/**

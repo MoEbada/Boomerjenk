@@ -9,17 +9,16 @@ import java.util.Properties;
 
 public class Config {
 
+	private String workingDirectory;
 	String devKey;
 	private URL testlinkURL;
 	private String testlinkImportableXmlFilePath;
 	private String testProjectName;
 	private String nunitExecLogFileLogFilePath;
 	String nunitExecutionCommand;
-	private String testfixtureCustomfieldName;
 	private Integer testProjectId;
 	String assembliesPathOnServer;
 	private String assembliesPathOnDisk;
-	private String assembliesUriOnDisk;
 	
 	private static Config instance = null;
 	private static final String PROPERTIES_FILENAME = "config.properties";
@@ -40,6 +39,7 @@ public class Config {
 	}
 	
 	void initializeConfigurationVariables() {
+		this.workingDirectory = System.getProperty("user.dir");
 		Properties prop = new Properties();
 		FileInputStream in = null;
 		try {
@@ -50,16 +50,20 @@ public class Config {
 			System.out.println("IOException: " + e1.getMessage());
 			e1.printStackTrace();
 		}
+
+		prop.setProperty("assembliesPathOnDisk", workingDirectory + "\\assembly");
+		prop.setProperty("testlinkImportableXmlFilePath", workingDirectory + "\\testlink_testresult.xml");
+		prop.setProperty("nunitExecLogFileLogFilePath", workingDirectory + "\\TestResult.xml");
+		
 		devKey = prop.getProperty("devKey");
 		testlinkImportableXmlFilePath = prop.getProperty("testlinkImportableXmlFilePath");
 		testProjectName = prop.getProperty("testProjectName");
 		nunitExecLogFileLogFilePath = prop.getProperty("nunitExecLogFileLogFilePath");
 		nunitExecutionCommand = prop.getProperty("nunitExecutionCommand");
-		testfixtureCustomfieldName = prop.getProperty("testfixtureCustomfieldName");
 		testProjectId = new Integer(prop.getProperty("testProjectId"));
 		assembliesPathOnServer = prop.getProperty("defaultAssembliesPathOnServer");
 		assembliesPathOnDisk = prop.getProperty("assembliesPathOnDisk");
-		assembliesUriOnDisk = prop.getProperty("assembliesUriOnDisk");
+		
 		try {
 			testlinkURL = new URL(prop.getProperty("testlinkUrl"));
 		} catch (MalformedURLException e) {
@@ -88,10 +92,6 @@ public class Config {
 		return nunitExecLogFileLogFilePath;
 	}
 
-	public String getTestfixtureCustomfieldName() {
-		return testfixtureCustomfieldName;
-	}
-
 	public int getTestProjectId() {
 		return testProjectId;
 	}
@@ -99,8 +99,8 @@ public class Config {
 	public String getAssembliesPathOnDisk() {
 		return assembliesPathOnDisk;
 	}
-
-	public String getAssembliesUriOnDisk() {
-		return assembliesUriOnDisk;
+	
+	public String getWorkingDirectory() {
+		return workingDirectory;
 	}
 }
