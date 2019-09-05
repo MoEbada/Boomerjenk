@@ -34,10 +34,16 @@ public class XMLParser {
 	TestLinkClient testlinkclient;
 	String TESTRESULT_XML = Config.getInstance().getTestlinkImportableXmlFilePath();
 	static DocumentBuilderFactory FACTORY;
+	static XPath xpath;
+	static XPathExpression expr;
 	static {
 		FACTORY = DocumentBuilderFactory.newInstance();
 		FACTORY.setValidating(true);
 		FACTORY.setIgnoringElementContentWhitespace(true);
+		
+		XPathFactory xPathfactory = XPathFactory.newInstance();
+		xpath = xPathfactory.newXPath();
+		expr = null;
 		}
 
 	XMLParser(TestLinkClient testlinkclient) {
@@ -114,11 +120,19 @@ public class XMLParser {
 			Element testcase = xmlResult.createElement("testcase");
 
 			if (null != executedTestFixtures.item(i)) {
-				testcase.setAttribute("FullExternalId", 
-						((Element)(executedTestFixtures.item(i))).getElementsByTagName("property").item(0).getAttributes().getNamedItem("value").getTextContent());
+				Node testFixtureProperty = null;
+				try {
+					expr = xpath.compile(".//properties/property");
+					testFixtureProperty = (Node) expr.evaluate(executedTestFixtures.item(i), XPathConstants.NODE);
+				} catch (XPathExpressionException e) {
+					System.out.println("XPathExpressionException: " + e.getMessage());
+					e.printStackTrace();
+				}
+				
+				testcase.setAttribute("FullExternalId", testFixtureProperty.getAttributes().getNamedItem("value").getTextContent());
 				
 				testcase.setAttribute("id", testlinkclient.testFixtureId
-						.get(((Element)(executedTestFixtures.item(i))).getElementsByTagName("property").item(0).getAttributes().getNamedItem("value").getTextContent()));
+						.get(testFixtureProperty.getAttributes().getNamedItem("value").getTextContent()));
 				
 				Element testerElement = xmlResult.createElement("tester");
 				testerElement.setTextContent(tester);
@@ -189,9 +203,6 @@ public class XMLParser {
 	 * @return
 	 */
 	private NodeList getTestFixtures(Document parsedLogFile) {
-		XPathFactory xPathfactory = XPathFactory.newInstance();
-		XPath xpath = xPathfactory.newXPath();
-		XPathExpression expr = null;
 		NodeList nl = null;
 		try {
 			expr = xpath.compile("//test-suite[@type=\"TestFixture\" and @runstate=\"Runnable\" and descendant::properties]");
