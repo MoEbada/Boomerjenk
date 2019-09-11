@@ -1,7 +1,6 @@
 package testlink;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -16,7 +15,6 @@ public class Config {
 	private String testProjectName;
 	private String nunitExecLogFileLogFilePath;
 	String nunitExecutionCommand;
-	private Integer testProjectId;
 	String assembliesPathOnServer;
 	private String assembliesPathOnDisk;
 	
@@ -60,7 +58,6 @@ public class Config {
 		testProjectName = prop.getProperty("testProjectName");
 		nunitExecLogFileLogFilePath = prop.getProperty("nunitExecLogFileLogFilePath");
 		nunitExecutionCommand = prop.getProperty("nunitExecutionCommand");
-		testProjectId = new Integer(prop.getProperty("testProjectId"));
 		assembliesPathOnServer = prop.getProperty("defaultAssembliesPathOnServer");
 		assembliesPathOnDisk = prop.getProperty("assembliesPathOnDisk");
 		
@@ -90,10 +87,6 @@ public class Config {
 
 	public String getNunitExecLogFileLogFilePath() {
 		return nunitExecLogFileLogFilePath;
-	}
-
-	public int getTestProjectId() {
-		return testProjectId;
 	}
 
 	public String getAssembliesPathOnDisk() {

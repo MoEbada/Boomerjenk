@@ -2,6 +2,7 @@ package testlink;
 
 import java.io.IOException;
 import br.eti.kinoshita.testlinkjavaapi.TestLinkAPI;
+import br.eti.kinoshita.testlinkjavaapi.util.TestLinkAPIException;
 
 public class Main {
 	static TestLinkClient testlinkClient;
@@ -76,7 +77,12 @@ public class Main {
 	}
 
 	private static void getTestPlan_BuildId_Platform() {
-		testlinkClient.getTestPlan_BuildId_Platform();
+		try {
+			testlinkClient.getTestPlan_BuildId_Platform();
+		} catch (TestLinkAPIException e) {
+			System.out.println("Exception: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	private static TestLinkAPI getTestLinkApi() {

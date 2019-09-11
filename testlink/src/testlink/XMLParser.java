@@ -10,7 +10,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -33,24 +32,24 @@ public class XMLParser {
 
 	TestLinkClient testlinkclient;
 	String TESTRESULT_XML = Config.getInstance().getTestlinkImportableXmlFilePath();
-	static DocumentBuilderFactory FACTORY;
-	static XPath xpath;
-	static XPathExpression expr;
+	static final DocumentBuilderFactory FACTORY;
+	private static final XPath XPATH;
 	static {
 		FACTORY = DocumentBuilderFactory.newInstance();
 		FACTORY.setValidating(true);
 		FACTORY.setIgnoringElementContentWhitespace(true);
-		
+
 		XPathFactory xPathfactory = XPathFactory.newInstance();
-		xpath = xPathfactory.newXPath();
-		expr = null;
-		}
+		XPATH = xPathfactory.newXPath();
+	}
 
 	XMLParser(TestLinkClient testlinkclient) {
 		this.testlinkclient = testlinkclient;
 	}
+
 	/**
 	 * Parse xml file as DOM document
+	 * 
 	 * @param filepath
 	 * @return
 	 * @throws ParserConfigurationException
@@ -65,7 +64,9 @@ public class XMLParser {
 	}
 
 	/**
-	 * Use generated test log xml to generate a new xml file to be imported by testlink
+	 * Use generated test log xml to generate a new xml file to be imported by
+	 * testlink
+	 * 
 	 * @param testPlanName
 	 * @param testPlanId
 	 * @param buildName
@@ -91,13 +92,16 @@ public class XMLParser {
 			e.printStackTrace();
 			System.out.println("Log file parsing exception: " + e.getMessage());
 		}
-		
-		Document xmlResult = writeImportableXmlElements(parsedLogFile, builder, testPlanId, testPlanName, buildId, buildName, platformId, platformName);
+
+		Document xmlResult = writeImportableXmlElements(parsedLogFile, builder, testPlanId, testPlanName, buildId,
+				buildName, platformId, platformName);
 
 		createImportableXmlFile(xmlResult);
 	}
-	
-	private Document writeImportableXmlElements(Document parsedLogFile, DocumentBuilder builder, Integer testPlanId, String testPlanName, Integer buildId, String buildName, Integer platformId, String platformName) {
+
+	private Document writeImportableXmlElements(Document parsedLogFile, DocumentBuilder builder, Integer testPlanId,
+			String testPlanName, Integer buildId, String buildName, Integer platformId, String platformName) {
+		XPathExpression expr = null;
 		Document xmlResult = builder.newDocument();
 
 		Element root = xmlResult.createElement("results");
@@ -105,54 +109,53 @@ public class XMLParser {
 
 		createChildElement(xmlResult, root, "testplan", testPlanName, testPlanId.toString());
 		createChildElement(xmlResult, root, "build", buildName, buildId.toString());
-		createChildElement(xmlResult, root, "platform", platformName, platformId.toString());		
+		createChildElement(xmlResult, root, "platform", platformName, platformId.toString());
 
 		NodeList executedTestFixtures = getTestFixtures(parsedLogFile);
+
+		// if no test fixtures were executed, skip writing test cases and return the
+		// document in current state.
+		// Test cases are written only when there are executed test fixtures.
+		if (null == executedTestFixtures) {
+			return xmlResult;
+		}
 		Integer numTestCases = executedTestFixtures.getLength();
-		String tester = parsedLogFile.getElementsByTagName("environment").item(0).getAttributes().getNamedItem("user")
-				.getTextContent();
+		String tester = ((Element)(parsedLogFile.getElementsByTagName("environment").item(0))).getAttribute("user");
 
 		if (testlinkclient.testFixtureId.size() != numTestCases) {
 			System.out.println("\r\n\r\n*******Not all test cases were executed!!!\r\n\r\n");
 		}
 
+		try {
+			expr = XPATH.compile("./properties/property[@name=\"tcid\"]/@value");
+		} catch (XPathExpressionException e1) {
+			System.out.println("XPathExpressionException: " + e1.getMessage());
+			e1.printStackTrace();
+		}
 		for (int i = 0; i < numTestCases; i++) {
+			Element executedTestFixture = (Element) executedTestFixtures.item(i);
 			Element testcase = xmlResult.createElement("testcase");
 
-			if (null != executedTestFixtures.item(i)) {
-				Node testFixtureProperty = null;
+			if (null != executedTestFixture) {
+				String testFixtureProperty = "";
 				try {
-					expr = xpath.compile(".//properties/property");
-					testFixtureProperty = (Node) expr.evaluate(executedTestFixtures.item(i), XPathConstants.NODE);
+					testFixtureProperty = (String) expr.evaluate(executedTestFixture, XPathConstants.STRING);
 				} catch (XPathExpressionException e) {
 					System.out.println("XPathExpressionException: " + e.getMessage());
 					e.printStackTrace();
+				} catch (NullPointerException e) {
+					System.out.println("NullPointerException: " + e.getMessage());
+					e.printStackTrace();
 				}
-				
-				testcase.setAttribute("FullExternalId", testFixtureProperty.getAttributes().getNamedItem("value").getTextContent());
-				
-				testcase.setAttribute("id", testlinkclient.testFixtureId
-						.get(testFixtureProperty.getAttributes().getNamedItem("value").getTextContent()));
-				
-				Element testerElement = xmlResult.createElement("tester");
-				testerElement.setTextContent(tester);
 
-				Element timestamp = xmlResult.createElement("timestamp");
-				timestamp.setTextContent(executedTestFixtures.item(i).getAttributes().getNamedItem("end-time")
-						.getTextContent().replace("Z", ""));
+				testcase.setAttribute("FullExternalId", testFixtureProperty);
 
-				Element result = xmlResult.createElement("result");
-				result.setTextContent(executedTestFixtures.item(i).getAttributes().getNamedItem("result")
-						.getTextContent().equalsIgnoreCase("passed") ? "p" : "f");
+				testcase.setAttribute("id", testlinkclient.testFixtureId.get(testFixtureProperty));
 
-				Element execDuration = xmlResult.createElement("executionDuration");
-				execDuration.setTextContent(
-						executedTestFixtures.item(i).getAttributes().getNamedItem("duration").getTextContent());
-
-				testcase.appendChild(testerElement);
-				testcase.appendChild(timestamp);
-				testcase.appendChild(result);
-				testcase.appendChild(execDuration);
+				createChildElementWithTextOnly(xmlResult, testcase, "tester", tester);
+				createChildElementWithTextOnly(xmlResult, testcase, "timestamp", executedTestFixture.getAttribute("end-time").replace("Z", ""));
+				createChildElementWithTextOnly(xmlResult, testcase, "result", (executedTestFixture.getAttribute("result").equalsIgnoreCase("passed") ? "p" : "f"));
+				createChildElementWithTextOnly(xmlResult, testcase, "executionDuration", executedTestFixture.getAttribute("duration"));
 
 				root.appendChild(testcase);
 			}
@@ -160,6 +163,14 @@ public class XMLParser {
 		return xmlResult;
 	}
 	
+	
+
+	private void createChildElementWithTextOnly(Document doc, Element parent, String childElementName, String textContent) {
+		Element elem = doc.createElement(childElementName);
+		elem.setTextContent(textContent);
+		parent.appendChild(elem);
+	}
+
 	private void createImportableXmlFile(Document xmlResult) {
 		// create the xml file
 		// transform the DOM Object to an XML File
@@ -188,24 +199,26 @@ public class XMLParser {
 
 		System.out.println("Done creating XML File");
 	}
-	
+
 	void createChildElement(Document xmldoc, Element parent, String elementName, String name, String id) {
 		Element elem = xmldoc.createElement(elementName);
 		elem.setAttribute("name", name);
 		elem.setAttribute("id", id);
-		
+
 		parent.appendChild(elem);
 	}
 
 	/**
 	 * Get all executed test fixtures from generated test log
+	 * 
 	 * @param parsedLogFile
 	 * @return
 	 */
 	private NodeList getTestFixtures(Document parsedLogFile) {
 		NodeList nl = null;
 		try {
-			expr = xpath.compile("//test-suite[@type=\"TestFixture\" and @runstate=\"Runnable\" and descendant::properties]");
+			XPathExpression expr = XPATH.compile(
+					"//test-suite[@type=\"TestFixture\" and @runstate=\"Runnable\" and descendant::properties]");
 			nl = (NodeList) expr.evaluate(parsedLogFile, XPathConstants.NODESET);
 		} catch (XPathExpressionException e) {
 			e.printStackTrace();
@@ -214,7 +227,7 @@ public class XMLParser {
 
 		return nl;
 	}
-	
+
 	Testcases getTestCasesFromTestReport(String xmlFilePath) {
 		System.out.println("Parsing testcases from xml to java objects..");
 		Testcases testcases = null;
@@ -222,11 +235,11 @@ public class XMLParser {
 
 			File file = new File(xmlFilePath);
 			JAXBContext jaxbContext = JAXBContext.newInstance(Testcases.class);
-		    Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-		     
-		    //We had written this file in marshalling example
-		    testcases = (Testcases) jaxbUnmarshaller.unmarshal(file);
-		     
+			Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+
+			// We had written this file in marshalling example
+			testcases = (Testcases) jaxbUnmarshaller.unmarshal(file);
+
 			if (null == testcases.getTestcases() || testcases.getTestcases().size() <= 0) {
 				System.out.println("No test cases were executed!");
 			} else {
@@ -238,7 +251,7 @@ public class XMLParser {
 
 		} catch (JAXBException e) {
 			e.printStackTrace();
-		  }
+		}
 		return testcases;
 	}
 }

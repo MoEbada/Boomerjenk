@@ -17,6 +17,8 @@ import org.xml.sax.SAXException;
 import br.eti.kinoshita.testlinkjavaapi.TestLinkAPI;
 import br.eti.kinoshita.testlinkjavaapi.constants.ExecutionStatus;
 import br.eti.kinoshita.testlinkjavaapi.constants.ExecutionType;
+import br.eti.kinoshita.testlinkjavaapi.model.Build;
+import br.eti.kinoshita.testlinkjavaapi.model.Platform;
 import br.eti.kinoshita.testlinkjavaapi.model.TestCase;
 import br.eti.kinoshita.testlinkjavaapi.util.TestLinkAPIException;
 
@@ -51,8 +53,8 @@ public class TestLinkClient {
 				ExecutionStatus tcStatus = getExecutionStatus(tc.getResult());
 
 				api_tcResult.reportTCResult(tc.getId(), null, testPlanId, tcStatus, null, buildId, buildName, "",
-						executionDurationMinutes, true, null, platformId, platformName, null, true,
-						tc.getTester(), tc.getTimestamp());
+						executionDurationMinutes, true, null, platformId, platformName, null, true, tc.getTester(),
+						tc.getTimestamp());
 			}
 		}
 	}
@@ -205,17 +207,44 @@ public class TestLinkClient {
 		}
 	}
 
-	void getTestPlan_BuildId_Platform() {
+	void getTestPlan_BuildId_Platform() throws TestLinkAPIException {
 		testPlanName = System.getenv("TEST_PLAN");
 		testPlanId = api.getTestPlanByName(testPlanName, Config.getInstance().getTestProjectName()).getId();
 		buildName = System.getenv("BUILD_ID");
-		buildId = api.getBuildsForTestPlan(testPlanId)[0].getId();
+		buildId = getBuildIdByName(api.getBuildsForTestPlan(testPlanId), buildName);
 		platformName = System.getenv("PLATFORM");
-		platformId = api.getTestPlanPlatforms(testPlanId)[0].getId();
+		platformId = getPlatformIdByName(api.getTestPlanPlatforms(testPlanId), platformName);
 
+		if (null == buildId || null == platformId) {
+			throw new TestLinkAPIException(
+					"Build <" + buildName + "> or platform <" + platformName + "> does not exist in project <"
+							+ Config.getInstance().getTestProjectName() + "> for test plan <" + testPlanName + ">");
+		}
 		System.out.println("Testlink's TestPlan: " + testPlanName);
-		System.out.println("Testlink's BuildId: " + buildName);
+		System.out.println("Testlink's Build: " + buildName);
 		System.out.println("Testlink's Platform: " + platformName);
+	}
+
+	private Integer getPlatformIdByName(Platform[] testPlanPlatforms, String platformName) {
+		if (null != platformName && !platformName.isEmpty()) {
+			for (Platform p : testPlanPlatforms) {
+				if (platformName.equalsIgnoreCase(p.getName())) {
+					return p.getId();
+				}
+			}
+		}
+		return null;
+	}
+
+	private Integer getBuildIdByName(Build[] buildsForTestPlan, String buildName) {
+		if (null != buildName && !buildName.isEmpty()) {
+			for (Build b : buildsForTestPlan) {
+				if (buildName.equalsIgnoreCase(b.getName())) {
+					return b.getId();
+				}
+			}
+		}
+		return null;
 	}
 
 	void addTestAssemblyToExecution() {
